@@ -1,71 +1,66 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-
-interface Class {
-  id: number;
-  title: string;
-  schedule: string;
-  teacherId: number;
-}
+import React from 'react';
+import { useClasses } from '../hooks';
+import { Schedule } from '../types';
 
 const ClassList: React.FC = () => {
-  const [classes, setClasses] = useState<Class[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchClasses();
-  }, []);
-
-  const fetchClasses = async () => {
-    try {
-      const response = await axios.get('http://localhost:8080/api/classes');
-      setClasses(response.data);
-      setLoading(false);
-    } catch (error) {
-      console.error('Error fetching classes:', error);
-      setLoading(false);
-    }
-  };
+  const { classes, loading } = useClasses();
 
   const formatSchedule = (scheduleStr: string) => {
     try {
-      const schedule = JSON.parse(scheduleStr);
+      const schedule: Schedule = JSON.parse(scheduleStr);
       return `${schedule.days.join(', ')} at ${schedule.time} in ${schedule.room}`;
-    } catch (error) {
+    } catch {
       return scheduleStr;
     }
   };
 
-  if (loading) {
-    return <div>Loading classes...</div>;
-  }
+  if (loading) return <div className="loading">📚 Loading classes...</div>;
 
   return (
-    <div>
-      <h2>All Classes</h2>
+    <div className="card">
+      <div className="header">
+        <h2>📚 All Classes</h2>
+        <span className="badge">{classes.length} classes</span>
+      </div>
+      
       {classes.length === 0 ? (
-        <p>No classes found.</p>
+        <div className="empty-state">
+          <p>📝 No classes found. <a href="/create-class">Create your first class</a></p>
+        </div>
       ) : (
-        <table className="table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Title</th>
-              <th>Teacher ID</th>
-              <th>Schedule</th>
-            </tr>
-          </thead>
-          <tbody>
-            {classes.map((classItem) => (
-              <tr key={classItem.id}>
-                <td>{classItem.id}</td>
-                <td>{classItem.title}</td>
-                <td>{classItem.teacherId}</td>
-                <td>{formatSchedule(classItem.schedule)}</td>
+        <div className="responsive-table">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Teacher</th>
+                <th>Schedule</th>
+                <th>Subject</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {classes.map((classItem) => (
+                <tr key={classItem.id}>
+                  <td>
+                    <strong>{classItem.title}</strong>
+                    <small>#{classItem.id}</small>
+                  </td>
+                  <td>
+                    {classItem.teacherName || `Teacher #${classItem.teacherId}`}
+                  </td>
+                  <td>
+                    <span className="schedule-badge">
+                      {formatSchedule(classItem.schedule)}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="subject-tag">{classItem.subject || 'N/A'}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

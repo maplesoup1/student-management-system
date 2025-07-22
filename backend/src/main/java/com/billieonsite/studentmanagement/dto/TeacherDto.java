@@ -11,6 +11,9 @@ public class TeacherDto {
     @NotBlank(message = "Subject is required")
     private String subject;
     
+    private Long userId;
+    private String username;
+    
     public TeacherDto() {}
     
     public TeacherDto(String name, String subject) {
@@ -22,6 +25,14 @@ public class TeacherDto {
         this.id = id;
         this.name = name;
         this.subject = subject;
+    }
+    
+    public TeacherDto(Long id, String name, String subject, Long userId, String username) {
+        this.id = id;
+        this.name = name;
+        this.subject = subject;
+        this.userId = userId;
+        this.username = username;
     }
     
     public Long getId() {
@@ -46,5 +57,21 @@ public class TeacherDto {
     
     public void setSubject(String subject) {
         this.subject = subject;
+    }
+    
+    public Long getUserId() {
+        return userId;
+    }
+    
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
+    
+    public String getUsername() {
+        return username;
+    }
+    
+    public void setUsername(String username) {
+        this.username = username;
     }
 }

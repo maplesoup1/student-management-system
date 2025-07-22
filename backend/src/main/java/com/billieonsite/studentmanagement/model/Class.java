@@ -9,11 +9,14 @@ public class Class {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    
     @NotBlank(message = "Title is required")
     @Column(nullable = false)
     private String title;
+    
     @Column(columnDefinition = "TEXT")
     private String schedule;
+    
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "teacher_id")
     private Teacher teacher;

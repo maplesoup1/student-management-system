@@ -37,7 +37,7 @@ public class EnrollmentService implements IEnrollmentService {
     }
     
     public List<Enrollment> getEnrollmentsByClass(Class classEntity) {
-        return enrollmentRepository.findByClassEntity(classEntity);
+        return enrollmentRepository.findByCourse(classEntity);
     }
     
     public Enrollment enrollStudent(Long studentId, Long classId) {
@@ -47,7 +47,7 @@ public class EnrollmentService implements IEnrollmentService {
         Class classEntity = classRepository.findById(classId)
             .orElseThrow(() -> new RuntimeException("Class not found with id: " + classId));
         
-        if (enrollmentRepository.existsByStudentAndClassEntity(student, classEntity)) {
+        if (enrollmentRepository.existsByStudentAndCourse(student, classEntity)) {
             throw new RuntimeException("Student is already enrolled in this class");
         }
         
@@ -62,7 +62,7 @@ public class EnrollmentService implements IEnrollmentService {
         Class classEntity = classRepository.findById(classId)
             .orElseThrow(() -> new RuntimeException("Class not found with id: " + classId));
         
-        Enrollment enrollment = enrollmentRepository.findByStudentAndClassEntity(student, classEntity)
+        Enrollment enrollment = enrollmentRepository.findByStudentAndCourse(student, classEntity)
             .orElseThrow(() -> new RuntimeException("Enrollment not found"));
         
         enrollmentRepository.delete(enrollment);

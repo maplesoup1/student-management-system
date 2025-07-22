@@ -3,14 +3,15 @@ package com.billieonsite.studentmanagement.model;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "enrollments")
+@Table(name = "enrollments", 
+       uniqueConstraints = @UniqueConstraint(columnNames = {"course_id", "student_id"}))
 public class Enrollment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "class_id")
-    private Class classEntity;
+    @JoinColumn(name = "course_id")
+    private Class course;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_id")
@@ -18,8 +19,8 @@ public class Enrollment {
 
     public Enrollment() {}
 
-    public Enrollment(Class classEntity, Student student) {
-        this.classEntity = classEntity;
+    public Enrollment(Class course, Student student) {
+        this.course = course;
         this.student = student;
     }
 
@@ -31,12 +32,12 @@ public class Enrollment {
         this.id = id;
     }
 
-    public Class getClassEntity() {
-        return classEntity;
+    public Class getCourse() {
+        return course;
     }
 
-    public void setClassEntity(Class classEntity) {
-        this.classEntity = classEntity;
+    public void setCourse(Class course) {
+        this.course = course;
     }
 
     public Student getStudent() {

@@ -15,12 +15,22 @@ public class Teacher {
     @NotBlank(message = "Subject is required")
     @Column(nullable = false)
     private String subject;
+    
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
 
     public Teacher() {}
 
     public Teacher(String name, String subject) {
         this.name = name;
         this.subject = subject;
+    }
+    
+    public Teacher(String name, String subject, User user) {
+        this.name = name;
+        this.subject = subject;
+        this.user = user;
     }
 
     public Long getId() {
@@ -45,5 +55,13 @@ public class Teacher {
 
     public void setSubject(String subject) {
         this.subject = subject;
+    }
+    
+    public User getUser() {
+        return user;
+    }
+    
+    public void setUser(User user) {
+        this.user = user;
     }
 }
