@@ -16,7 +16,6 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/students")
-@CrossOrigin(origins = "*")
 public class StudentController {
 
     @Autowired
@@ -28,6 +27,9 @@ public class StudentController {
     @GetMapping
     public ResponseEntity<List<StudentDto>> getAllStudents() {
         List<Student> students = studentRepository.findAll();
+        System.out.println("=== All Students ===");
+        students.forEach(s -> System.out.println("Student ID: " + s.getId() + ", User ID: " + 
+            (s.getUser() != null ? s.getUser().getId() : "null") + ", Name: " + s.getName()));
         List<StudentDto> studentDtos = students.stream()
             .map(student -> new StudentDto(
                 student.getId(),

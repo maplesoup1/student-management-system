@@ -1,8 +1,16 @@
 // API Types matching backend DTOs
+export enum Role {
+  ADMIN = 'ADMIN',
+  TEACHER = 'TEACHER',
+  STUDENT = 'STUDENT',
+}
+
 export interface User {
   id: number;
   username: string;
-  role: 'ADMIN' | 'TEACHER' | 'STUDENT';
+  email?: string;
+  password?: string; // Make password optional for DTOs where it's not always present
+  role: Role;
 }
 
 export interface Student {
@@ -38,13 +46,26 @@ export interface Enrollment {
   studentEmail?: string;
   classTitle?: string;
   teacherName?: string;
+  day?: string;
+  startTime?: string;
+  endTime?: string;
+  room?: string;
+}
+
+export interface TimeSlot {
+  start: string;
+  end: string;
+  room: string;
 }
 
 export interface Schedule {
-  days: string[];
-  time: string;
-  room: string;
-  duration?: string;
+  monday: TimeSlot[];
+  tuesday: TimeSlot[];
+  wednesday: TimeSlot[];
+  thursday: TimeSlot[];
+  friday: TimeSlot[];
+  saturday: TimeSlot[];
+  sunday: TimeSlot[];
 }
 
 export interface TeacherDashboard {

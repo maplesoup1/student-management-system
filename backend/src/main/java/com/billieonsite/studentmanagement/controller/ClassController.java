@@ -8,15 +8,17 @@ import com.billieonsite.studentmanagement.repository.TeacherRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.validation.Valid;
-import java.util.List;
-import java.util.Optional;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/classes")
-@CrossOrigin(origins = "*")
 public class ClassController {
 
     @Autowired
@@ -24,6 +26,8 @@ public class ClassController {
     
     @Autowired
     private TeacherRepository teacherRepository;
+    
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @GetMapping
     public ResponseEntity<List<ClassDto>> getAllClasses() {
@@ -78,24 +82,41 @@ public class ClassController {
     }
 
     @PostMapping
-    public ResponseEntity<ClassDto> createClass(@Valid @RequestBody ClassDto classDto) {
-        Class clazz = new Class(classDto.getTitle(), classDto.getSchedule(), null);
-        
-        if (classDto.getTeacherId() != null) {
-            Optional<Teacher> teacher = teacherRepository.findById(classDto.getTeacherId());
-            if (teacher.isPresent()) {
-                clazz.setTeacher(teacher.get());
-            }
+    public ResponseEntity<?> createClass(@Valid @RequestBody ClassDto classDto) {
+        // Validate teacher exists
+        if (classDto.getTeacherId() == null) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "Teacher ID is required");
+            return ResponseEntity.badRequest().body(error);
         }
-
+        
+        Optional<Teacher> teacherOpt = teacherRepository.findById(classDto.getTeacherId());
+        if (!teacherOpt.isPresent()) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "Teacher not found");
+            return ResponseEntity.badRequest().body(error);
+        }
+        
+        Teacher teacher = teacherOpt.get();
+        
+        // Check for conflicts before creating the class
+        List<String> conflictErrors = checkScheduleConflicts(classDto.getSchedule(), teacher, null);
+        if (!conflictErrors.isEmpty()) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Schedule conflicts detected");
+            error.put("conflicts", conflictErrors);
+            return ResponseEntity.badRequest().body(error);
+        }
+        
+        Class clazz = new Class(classDto.getTitle(), classDto.getSchedule(), teacher);
         Class savedClass = classRepository.save(clazz);
         
         ClassDto responseDto = new ClassDto(
             savedClass.getId(),
             savedClass.getTitle(),
             savedClass.getSchedule(),
-            savedClass.getTeacher() != null ? savedClass.getTeacher().getId() : null,
-            savedClass.getTeacher() != null ? savedClass.getTeacher().getName() : null
+            savedClass.getTeacher().getId(),
+            savedClass.getTeacher().getName()
         );
         
         return ResponseEntity.ok(responseDto);
@@ -142,5 +163,146 @@ public class ClassController {
             return ResponseEntity.ok("Class deleted successfully");
         }
         return ResponseEntity.notFound().build();
+    }
+    
+    private List<String> checkScheduleConflicts(String scheduleJson, Teacher teacher, Long excludeClassId) {
+        List<String> conflicts = new ArrayList<>();
+        
+        try {
+            JsonNode schedule = objectMapper.readTree(scheduleJson);
+            String[] days = {"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"};
+            
+            for (String day : days) {
+                JsonNode daySchedule = schedule.get(day);
+                if (daySchedule == null || !daySchedule.isArray()) {
+                    continue;
+                }
+                
+                for (JsonNode timeSlot : daySchedule) {
+                    String room = timeSlot.get("room").asText();
+                    String startTime = timeSlot.get("start").asText();
+                    String endTime = timeSlot.get("end").asText();
+                    
+                    // Check room conflicts
+                    List<String> roomConflicts = checkRoomConflicts(room, day, startTime, endTime, excludeClassId);
+                    conflicts.addAll(roomConflicts);
+                    
+                    // Check teacher conflicts
+                    List<String> teacherConflicts = checkTeacherConflicts(teacher, day, startTime, endTime, excludeClassId);
+                    conflicts.addAll(teacherConflicts);
+                }
+            }
+        } catch (Exception e) {
+            conflicts.add("Error parsing schedule: " + e.getMessage());
+        }
+        
+        return conflicts;
+    }
+    
+    private List<String> checkRoomConflicts(String room, String day, String startTime, String endTime, Long excludeClassId) {
+        List<String> conflicts = new ArrayList<>();
+        List<Class> allClasses = classRepository.findAll();
+        
+        LocalTime targetStart = LocalTime.parse(startTime, DateTimeFormatter.ofPattern("HH:mm"));
+        LocalTime targetEnd = LocalTime.parse(endTime, DateTimeFormatter.ofPattern("HH:mm"));
+        
+        for (Class clazz : allClasses) {
+            if (excludeClassId != null && clazz.getId().equals(excludeClassId)) {
+                continue;
+            }
+            
+            if (hasRoomConflict(clazz.getSchedule(), room, day, startTime, endTime)) {
+                conflicts.add("Room " + room + " conflict on " + day + " " + startTime + "-" + endTime + 
+                            " with class: " + clazz.getTitle() + " (Teacher: " + 
+                            (clazz.getTeacher() != null ? clazz.getTeacher().getName() : "Unknown") + ")");
+            }
+        }
+        
+        return conflicts;
+    }
+    
+    private List<String> checkTeacherConflicts(Teacher teacher, String day, String startTime, String endTime, Long excludeClassId) {
+        List<String> conflicts = new ArrayList<>();
+        List<Class> teacherClasses = classRepository.findByTeacher(teacher);
+        
+        for (Class clazz : teacherClasses) {
+            if (excludeClassId != null && clazz.getId().equals(excludeClassId)) {
+                continue;
+            }
+            
+            if (hasTimeConflict(clazz.getSchedule(), day, startTime, endTime)) {
+                conflicts.add("Teacher " + teacher.getName() + " conflict on " + day + " " + startTime + "-" + endTime + 
+                            " with class: " + clazz.getTitle());
+            }
+        }
+        
+        return conflicts;
+    }
+    
+    private boolean hasRoomConflict(String scheduleJson, String targetRoom, String targetDay, 
+                                   String targetStartTime, String targetEndTime) {
+        try {
+            JsonNode schedule = objectMapper.readTree(scheduleJson);
+            JsonNode daySchedule = schedule.get(targetDay.toLowerCase());
+            
+            if (daySchedule == null || !daySchedule.isArray()) {
+                return false;
+            }
+
+            LocalTime targetStart = LocalTime.parse(targetStartTime, DateTimeFormatter.ofPattern("HH:mm"));
+            LocalTime targetEnd = LocalTime.parse(targetEndTime, DateTimeFormatter.ofPattern("HH:mm"));
+
+            for (JsonNode timeSlot : daySchedule) {
+                String room = timeSlot.get("room").asText();
+                String startTime = timeSlot.get("start").asText();
+                String endTime = timeSlot.get("end").asText();
+
+                if (!room.equalsIgnoreCase(targetRoom)) {
+                    continue;
+                }
+
+                LocalTime slotStart = LocalTime.parse(startTime, DateTimeFormatter.ofPattern("HH:mm"));
+                LocalTime slotEnd = LocalTime.parse(endTime, DateTimeFormatter.ofPattern("HH:mm"));
+
+                if (targetStart.isBefore(slotEnd) && targetEnd.isAfter(slotStart)) {
+                    return true;
+                }
+            }
+
+            return false;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private boolean hasTimeConflict(String scheduleJson, String targetDay, 
+                                   String targetStartTime, String targetEndTime) {
+        try {
+            JsonNode schedule = objectMapper.readTree(scheduleJson);
+            JsonNode daySchedule = schedule.get(targetDay.toLowerCase());
+            
+            if (daySchedule == null || !daySchedule.isArray()) {
+                return false;
+            }
+
+            LocalTime targetStart = LocalTime.parse(targetStartTime, DateTimeFormatter.ofPattern("HH:mm"));
+            LocalTime targetEnd = LocalTime.parse(targetEndTime, DateTimeFormatter.ofPattern("HH:mm"));
+
+            for (JsonNode timeSlot : daySchedule) {
+                String startTime = timeSlot.get("start").asText();
+                String endTime = timeSlot.get("end").asText();
+
+                LocalTime slotStart = LocalTime.parse(startTime, DateTimeFormatter.ofPattern("HH:mm"));
+                LocalTime slotEnd = LocalTime.parse(endTime, DateTimeFormatter.ofPattern("HH:mm"));
+
+                if (targetStart.isBefore(slotEnd) && targetEnd.isAfter(slotStart)) {
+                    return true;
+                }
+            }
+
+            return false;
+        } catch (Exception e) {
+            return false;
+        }
     }
 }

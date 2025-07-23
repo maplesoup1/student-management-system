@@ -12,8 +12,7 @@ public class Teacher {
     @NotBlank(message = "Name is required")
     @Column(nullable = false)
     private String name;
-    @NotBlank(message = "Subject is required")
-    @Column(nullable = false)
+    @Column(nullable = true)
     private String subject;
     
     @OneToOne(fetch = FetchType.LAZY)

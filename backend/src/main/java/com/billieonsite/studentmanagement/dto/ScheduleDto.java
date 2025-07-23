@@ -1,57 +1,60 @@
 package com.billieonsite.studentmanagement.dto;
 
 import java.util.List;
+import java.util.Map;
 
 public class ScheduleDto {
-    private List<String> days;
-    private String time;
-    private String room;
-    private String duration;
-    
+    private Map<String, List<TimeSlot>> schedule;
+
+    public static class TimeSlot {
+        private String start;
+        private String end;
+        private String room;
+
+        public TimeSlot() {}
+
+        public TimeSlot(String start, String end, String room) {
+            this.start = start;
+            this.end = end;
+            this.room = room;
+        }
+
+        public String getStart() {
+            return start;
+        }
+
+        public void setStart(String start) {
+            this.start = start;
+        }
+
+        public String getEnd() {
+            return end;
+        }
+
+        public void setEnd(String end) {
+            this.end = end;
+        }
+
+        public String getRoom() {
+            return room;
+        }
+
+        public void setRoom(String room) {
+            this.room = room;
+        }
+    }
+
     public ScheduleDto() {}
-    
-    public ScheduleDto(List<String> days, String time, String room) {
-        this.days = days;
-        this.time = time;
-        this.room = room;
+
+    public ScheduleDto(Map<String, List<TimeSlot>> schedule) {
+        this.schedule = schedule;
     }
-    
-    public ScheduleDto(List<String> days, String time, String room, String duration) {
-        this.days = days;
-        this.time = time;
-        this.room = room;
-        this.duration = duration;
+
+    public Map<String, List<TimeSlot>> getSchedule() {
+        return schedule;
     }
-    
-    public List<String> getDays() {
-        return days;
-    }
-    
-    public void setDays(List<String> days) {
-        this.days = days;
-    }
-    
-    public String getTime() {
-        return time;
-    }
-    
-    public void setTime(String time) {
-        this.time = time;
-    }
-    
-    public String getRoom() {
-        return room;
-    }
-    
-    public void setRoom(String room) {
-        this.room = room;
-    }
-    
-    public String getDuration() {
-        return duration;
-    }
-    
-    public void setDuration(String duration) {
-        this.duration = duration;
+
+    public void setSchedule(Map<String, List<TimeSlot>> schedule) {
+        this.schedule = schedule;
     }
 }

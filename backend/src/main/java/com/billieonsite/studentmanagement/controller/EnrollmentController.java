@@ -18,7 +18,6 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/enrollments")
-@CrossOrigin(origins = "*")
 public class EnrollmentController {
 
     @Autowired
@@ -37,11 +36,15 @@ public class EnrollmentController {
             .map(enrollment -> new EnrollmentDto(
                 enrollment.getId(),
                 enrollment.getStudent().getId(),
-                enrollment.getCourse().getId(),
+                enrollment.getClassEntity().getId(),
                 enrollment.getStudent().getName(),
                 enrollment.getStudent().getEmail(),
-                enrollment.getCourse().getTitle(),
-                enrollment.getCourse().getTeacher() != null ? enrollment.getCourse().getTeacher().getName() : null
+                enrollment.getClassEntity().getTitle(),
+                enrollment.getClassEntity().getTeacher() != null ? enrollment.getClassEntity().getTeacher().getName() : null,
+                enrollment.getDay(),
+                enrollment.getStartTime(),
+                enrollment.getEndTime(),
+                enrollment.getRoom()
             ))
             .collect(Collectors.toList());
         return ResponseEntity.ok(enrollmentDtos);
@@ -55,11 +58,11 @@ public class EnrollmentController {
             EnrollmentDto enrollmentDto = new EnrollmentDto(
                 e.getId(),
                 e.getStudent().getId(),
-                e.getCourse().getId(),
+                e.getClassEntity().getId(),
                 e.getStudent().getName(),
                 e.getStudent().getEmail(),
-                e.getCourse().getTitle(),
-                e.getCourse().getTeacher() != null ? e.getCourse().getTeacher().getName() : null
+                e.getClassEntity().getTitle(),
+                e.getClassEntity().getTeacher() != null ? e.getClassEntity().getTeacher().getName() : null
             );
             return ResponseEntity.ok(enrollmentDto);
         }
@@ -78,11 +81,15 @@ public class EnrollmentController {
             .map(enrollment -> new EnrollmentDto(
                 enrollment.getId(),
                 enrollment.getStudent().getId(),
-                enrollment.getCourse().getId(),
+                enrollment.getClassEntity().getId(),
                 enrollment.getStudent().getName(),
                 enrollment.getStudent().getEmail(),
-                enrollment.getCourse().getTitle(),
-                enrollment.getCourse().getTeacher() != null ? enrollment.getCourse().getTeacher().getName() : null
+                enrollment.getClassEntity().getTitle(),
+                enrollment.getClassEntity().getTeacher() != null ? enrollment.getClassEntity().getTeacher().getName() : null,
+                enrollment.getDay(),
+                enrollment.getStartTime(),
+                enrollment.getEndTime(),
+                enrollment.getRoom()
             ))
             .collect(Collectors.toList());
         return ResponseEntity.ok(enrollmentDtos);
@@ -95,16 +102,20 @@ public class EnrollmentController {
             return ResponseEntity.notFound().build();
         }
         
-        List<Enrollment> enrollments = enrollmentRepository.findByCourse(clazz.get());
+        List<Enrollment> enrollments = enrollmentRepository.findByClassEntity(clazz.get());
         List<EnrollmentDto> enrollmentDtos = enrollments.stream()
             .map(enrollment -> new EnrollmentDto(
                 enrollment.getId(),
                 enrollment.getStudent().getId(),
-                enrollment.getCourse().getId(),
+                enrollment.getClassEntity().getId(),
                 enrollment.getStudent().getName(),
                 enrollment.getStudent().getEmail(),
-                enrollment.getCourse().getTitle(),
-                enrollment.getCourse().getTeacher() != null ? enrollment.getCourse().getTeacher().getName() : null
+                enrollment.getClassEntity().getTitle(),
+                enrollment.getClassEntity().getTeacher() != null ? enrollment.getClassEntity().getTeacher().getName() : null,
+                enrollment.getDay(),
+                enrollment.getStartTime(),
+                enrollment.getEndTime(),
+                enrollment.getRoom()
             ))
             .collect(Collectors.toList());
         return ResponseEntity.ok(enrollmentDtos);
@@ -112,35 +123,79 @@ public class EnrollmentController {
 
     @PostMapping
     public ResponseEntity<?> createEnrollment(@Valid @RequestBody EnrollmentDto enrollmentDto) {
+        // Debug logging
+        System.out.println("Attempting to enroll student ID: " + enrollmentDto.getStudentId() + " in class ID: " + enrollmentDto.getClassId());
+        System.out.println("Total students in database: " + studentRepository.count());
+        System.out.println("Total classes in database: " + classRepository.count());
+        
         Optional<Student> student = studentRepository.findById(enrollmentDto.getStudentId());
         Optional<Class> clazz = classRepository.findById(enrollmentDto.getClassId());
         
         if (!student.isPresent()) {
-            return ResponseEntity.badRequest().body("Student not found");
+            System.out.println("Student not found with ID: " + enrollmentDto.getStudentId());
+            List<Student> allStudents = studentRepository.findAll();
+            System.out.println("Available student IDs: " + allStudents.stream().map(s -> s.getId()).toList());
+            return ResponseEntity.badRequest().body("Student not found with ID: " + enrollmentDto.getStudentId());
         }
         
         if (!clazz.isPresent()) {
             return ResponseEntity.badRequest().body("Class not found");
         }
         
-        if (enrollmentRepository.existsByStudentAndCourse(student.get(), clazz.get())) {
-            return ResponseEntity.badRequest().body("Student already enrolled in this class");
-        }
+        // Check for exact time slot conflict
+        if (enrollmentDto.getDay() != null && enrollmentDto.getStartTime() != null && enrollmentDto.getEndTime() != null) {
+            // Check if this exact time slot is already enrolled
+            if (enrollmentRepository.existsByStudentAndClassEntityAndDayAndStartTimeAndEndTime(
+                    student.get(), clazz.get(), enrollmentDto.getDay(), 
+                    enrollmentDto.getStartTime(), enrollmentDto.getEndTime())) {
+                return ResponseEntity.badRequest().body("Student already enrolled in this time slot");
+            }
+            
+            Enrollment enrollment = new Enrollment(clazz.get(), student.get(), 
+                enrollmentDto.getDay(), enrollmentDto.getStartTime(), 
+                enrollmentDto.getEndTime(), enrollmentDto.getRoom());
+            Enrollment savedEnrollment = enrollmentRepository.save(enrollment);
+            
+            EnrollmentDto responseDto = new EnrollmentDto(
+                savedEnrollment.getId(),
+                savedEnrollment.getStudent().getId(),
+                savedEnrollment.getClassEntity().getId(),
+                savedEnrollment.getStudent().getName(),
+                savedEnrollment.getStudent().getEmail(),
+                savedEnrollment.getClassEntity().getTitle(),
+                savedEnrollment.getClassEntity().getTeacher() != null ? savedEnrollment.getClassEntity().getTeacher().getName() : null,
+                savedEnrollment.getDay(),
+                savedEnrollment.getStartTime(),
+                savedEnrollment.getEndTime(),
+                savedEnrollment.getRoom()
+            );
+            
+            return ResponseEntity.ok(responseDto);
+        } else {
+            // Legacy support: enroll in entire class
+            if (enrollmentRepository.existsByStudentAndClassEntity(student.get(), clazz.get())) {
+                return ResponseEntity.badRequest().body("Student already enrolled in this class");
+            }
 
-        Enrollment enrollment = new Enrollment(clazz.get(), student.get());
-        Enrollment savedEnrollment = enrollmentRepository.save(enrollment);
-        
-        EnrollmentDto responseDto = new EnrollmentDto(
-            savedEnrollment.getId(),
-            savedEnrollment.getStudent().getId(),
-            savedEnrollment.getCourse().getId(),
-            savedEnrollment.getStudent().getName(),
-            savedEnrollment.getStudent().getEmail(),
-            savedEnrollment.getCourse().getTitle(),
-            savedEnrollment.getCourse().getTeacher() != null ? savedEnrollment.getCourse().getTeacher().getName() : null
-        );
-        
-        return ResponseEntity.ok(responseDto);
+            Enrollment enrollment = new Enrollment(clazz.get(), student.get());
+            Enrollment savedEnrollment = enrollmentRepository.save(enrollment);
+            
+            EnrollmentDto responseDto = new EnrollmentDto(
+                savedEnrollment.getId(),
+                savedEnrollment.getStudent().getId(),
+                savedEnrollment.getClassEntity().getId(),
+                savedEnrollment.getStudent().getName(),
+                savedEnrollment.getStudent().getEmail(),
+                savedEnrollment.getClassEntity().getTitle(),
+                savedEnrollment.getClassEntity().getTeacher() != null ? savedEnrollment.getClassEntity().getTeacher().getName() : null,
+                savedEnrollment.getDay(),
+                savedEnrollment.getStartTime(),
+                savedEnrollment.getEndTime(),
+                savedEnrollment.getRoom()
+            );
+            
+            return ResponseEntity.ok(responseDto);
+        }
     }
 
     @DeleteMapping("/{id}")
@@ -163,7 +218,7 @@ public class EnrollmentController {
             return ResponseEntity.notFound().build();
         }
         
-        Optional<Enrollment> enrollment = enrollmentRepository.findByStudentAndCourse(student.get(), clazz.get());
+        Optional<Enrollment> enrollment = enrollmentRepository.findByStudentAndClassEntity(student.get(), clazz.get());
         
         if (enrollment.isPresent()) {
             enrollmentRepository.delete(enrollment.get());

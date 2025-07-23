@@ -1,0 +1,93 @@
+
+/* StudentManagement.css */
+
+.student-management-container {
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.student-management-container h2 {
+    color: #333;
+    margin-bottom: 20px;
+}
+
+.student-form {
+    margin-bottom: 20px;
+    padding: 15px;
+    border: 1px solid #eee;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+}
+
+.student-form input[type="text"],
+.student-form input[type="email"] {
+    margin-right: 10px;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    width: 200px; /* Adjust width as needed */
+}
+
+.student-form button {
+    padding: 8px 15px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.student-form button:hover {
+    background-color: #0056b3;
+}
+
+.student-list-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.student-list-table th,
+.student-list-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+.student-list-table th {
+    background-color: #f2f2f2;
+    color: #555;
+}
+
+.student-list-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.student-list-table tr:hover {
+    background-color: #f1f1f1;
+}
+
+.delete-button {
+    background-color: #f44336;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.delete-button:hover {
+    background-color: #d32f2f;
+}
+
+.error-message {
+    color: red;
+    font-weight: bold;
+}
+
+.loading-message {
+    color: #555;
+    font-style: italic;
+}
