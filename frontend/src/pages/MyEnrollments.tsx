@@ -128,7 +128,9 @@ const MyEnrollments: React.FC = () => {
               <tr>
                 <th>Class Title</th>
                 <th>Teacher</th>
-                <th>Schedule</th>
+                <th>Day</th>
+                <th>Time</th>
+                <th>Room</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -149,13 +151,33 @@ const MyEnrollments: React.FC = () => {
                       {enrollment.teacherName || (course ? getTeacherName(course.teacherId) : 'Unknown Teacher')}
                     </td>
                     <td>
-                      {course ? formatScheduleForTable(course.schedule) : <span style={{ color: '#6c757d', fontStyle: 'italic' }}>Schedule not available</span>}
+                      <span className="subject-tag" style={{ textTransform: 'capitalize' }}>
+                        {enrollment.day || 'N/A'}
+                      </span>
+                    </td>
+                    <td>
+                      {enrollment.startTime && enrollment.endTime ? (
+                        <span className="schedule-badge">
+                          {enrollment.startTime}-{enrollment.endTime}
+                        </span>
+                      ) : (
+                        <span style={{ color: '#6c757d', fontStyle: 'italic' }}>Time not specified</span>
+                      )}
+                    </td>
+                    <td>
+                      <span className="class-badge">
+                        {enrollment.room || 'N/A'}
+                      </span>
                     </td>
                     <td>
                       <button
                         className="btn btn-danger btn-sm"
-                        onClick={() => handleUnenroll(enrollment.id, enrollment.classTitle || course?.title || 'Class')}
+                        onClick={() => handleUnenroll(
+                          enrollment.id, 
+                          `${enrollment.classTitle || course?.title || 'Class'} - ${enrollment.day} ${enrollment.startTime}-${enrollment.endTime}`
+                        )}
                         disabled={unenrollingId === enrollment.id}
+                        title={`Unenroll from ${enrollment.classTitle} - ${enrollment.day} ${enrollment.startTime}-${enrollment.endTime}`}
                       >
                         {unenrollingId === enrollment.id ? 'Unenrolling...' : 'Unenroll'}
                       </button>

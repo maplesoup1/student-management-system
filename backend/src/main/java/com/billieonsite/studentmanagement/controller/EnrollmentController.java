@@ -9,6 +9,8 @@ import com.billieonsite.studentmanagement.repository.StudentRepository;
 import com.billieonsite.studentmanagement.repository.ClassRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
@@ -62,7 +64,11 @@ public class EnrollmentController {
                 e.getStudent().getName(),
                 e.getStudent().getEmail(),
                 e.getClassEntity().getTitle(),
-                e.getClassEntity().getTeacher() != null ? e.getClassEntity().getTeacher().getName() : null
+                e.getClassEntity().getTeacher() != null ? e.getClassEntity().getTeacher().getName() : null,
+                e.getDay(),
+                e.getStartTime(),
+                e.getEndTime(),
+                e.getRoom()
             );
             return ResponseEntity.ok(enrollmentDto);
         }
@@ -122,35 +128,30 @@ public class EnrollmentController {
     }
 
     @PostMapping
+    @Transactional
     public ResponseEntity<?> createEnrollment(@Valid @RequestBody EnrollmentDto enrollmentDto) {
-        // Debug logging
-        System.out.println("Attempting to enroll student ID: " + enrollmentDto.getStudentId() + " in class ID: " + enrollmentDto.getClassId());
-        System.out.println("Total students in database: " + studentRepository.count());
-        System.out.println("Total classes in database: " + classRepository.count());
-        
+        // Basic entity validation
         Optional<Student> student = studentRepository.findById(enrollmentDto.getStudentId());
         Optional<Class> clazz = classRepository.findById(enrollmentDto.getClassId());
         
         if (!student.isPresent()) {
-            System.out.println("Student not found with ID: " + enrollmentDto.getStudentId());
-            List<Student> allStudents = studentRepository.findAll();
-            System.out.println("Available student IDs: " + allStudents.stream().map(s -> s.getId()).toList());
             return ResponseEntity.badRequest().body("Student not found with ID: " + enrollmentDto.getStudentId());
         }
         
         if (!clazz.isPresent()) {
-            return ResponseEntity.badRequest().body("Class not found");
+            return ResponseEntity.badRequest().body("Class not found with ID: " + enrollmentDto.getClassId());
         }
         
-        // Check for exact time slot conflict
-        if (enrollmentDto.getDay() != null && enrollmentDto.getStartTime() != null && enrollmentDto.getEndTime() != null) {
-            // Check if this exact time slot is already enrolled
-            if (enrollmentRepository.existsByStudentAndClassEntityAndDayAndStartTimeAndEndTime(
-                    student.get(), clazz.get(), enrollmentDto.getDay(), 
-                    enrollmentDto.getStartTime(), enrollmentDto.getEndTime())) {
-                return ResponseEntity.badRequest().body("Student already enrolled in this time slot");
-            }
-            
+        // Check for time conflicts (overlapping time slots on the same day)
+        // This is the only check we need - database constraint will handle exact duplicates
+        if (enrollmentRepository.hasTimeConflict(student.get(), enrollmentDto.getDay(), 
+                enrollmentDto.getStartTime(), enrollmentDto.getEndTime())) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body("Schedule conflict: Student has an overlapping time slot on " + enrollmentDto.getDay());
+        }
+        
+        try {
+            // Create and save enrollment - database constraint will prevent exact duplicates
             Enrollment enrollment = new Enrollment(clazz.get(), student.get(), 
                 enrollmentDto.getDay(), enrollmentDto.getStartTime(), 
                 enrollmentDto.getEndTime(), enrollmentDto.getRoom());
@@ -171,30 +172,14 @@ public class EnrollmentController {
             );
             
             return ResponseEntity.ok(responseDto);
-        } else {
-            // Legacy support: enroll in entire class
-            if (enrollmentRepository.existsByStudentAndClassEntity(student.get(), clazz.get())) {
-                return ResponseEntity.badRequest().body("Student already enrolled in this class");
+            
+        } catch (Exception e) {
+            // Handle database constraint violations (like duplicate enrollments)
+            if (e.getMessage().contains("unique constraint") || e.getMessage().contains("duplicate key")) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body("Student already enrolled in this exact time slot");
             }
-
-            Enrollment enrollment = new Enrollment(clazz.get(), student.get());
-            Enrollment savedEnrollment = enrollmentRepository.save(enrollment);
-            
-            EnrollmentDto responseDto = new EnrollmentDto(
-                savedEnrollment.getId(),
-                savedEnrollment.getStudent().getId(),
-                savedEnrollment.getClassEntity().getId(),
-                savedEnrollment.getStudent().getName(),
-                savedEnrollment.getStudent().getEmail(),
-                savedEnrollment.getClassEntity().getTitle(),
-                savedEnrollment.getClassEntity().getTeacher() != null ? savedEnrollment.getClassEntity().getTeacher().getName() : null,
-                savedEnrollment.getDay(),
-                savedEnrollment.getStartTime(),
-                savedEnrollment.getEndTime(),
-                savedEnrollment.getRoom()
-            );
-            
-            return ResponseEntity.ok(responseDto);
+            throw e; // Re-throw other exceptions
         }
     }
 
@@ -207,24 +192,6 @@ public class EnrollmentController {
         return ResponseEntity.notFound().build();
     }
 
-    @DeleteMapping("/student/{studentId}/class/{classId}")
-    public ResponseEntity<String> deleteEnrollmentByStudentAndClass(
-            @PathVariable Long studentId, @PathVariable Long classId) {
-        
-        Optional<Student> student = studentRepository.findById(studentId);
-        Optional<Class> clazz = classRepository.findById(classId);
-        
-        if (!student.isPresent() || !clazz.isPresent()) {
-            return ResponseEntity.notFound().build();
-        }
-        
-        Optional<Enrollment> enrollment = enrollmentRepository.findByStudentAndClassEntity(student.get(), clazz.get());
-        
-        if (enrollment.isPresent()) {
-            enrollmentRepository.delete(enrollment.get());
-            return ResponseEntity.ok("Enrollment deleted successfully");
-        }
-        
-        return ResponseEntity.notFound().build();
-    }
+    // Removed outdated deletion endpoint that doesn't work with time slot-based enrollments
+    // Use DELETE /{id} instead to delete specific enrollment records
 }

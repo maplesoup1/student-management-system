@@ -60,17 +60,24 @@ WHERE NOT EXISTS (
     SELECT 1 FROM classes WHERE classes.title = v.title
 );
 
--- Insert enrollments (with unique constraint protection)
-INSERT INTO enrollments (student_id, class_id) 
-SELECT s.id, c.id
+-- Insert enrollments with time slot information (simplified test data)
+-- Each enrollment targets specific time slots with complete information
+INSERT INTO enrollments (student_id, class_id, day, start_time, end_time, room) 
+SELECT s.id, c.id, time_slot.day, time_slot.start_time, time_slot.end_time, time_slot.room
 FROM (VALUES
-  ('Alice Chen', 'Advanced Mathematics'), ('Alice Chen', 'Business English'),
-  ('Bob Davis', 'Advanced Mathematics'), ('Bob Davis', 'Chinese Literature'),
-  ('Charlie Lee', 'Business English'), ('Charlie Lee', 'Financial Accounting'),
-  ('Diana Kim', 'Chinese Literature'), ('Diana Kim', 'Financial Accounting')
-) AS v(student_name, class_title)
-JOIN students s ON s.name = v.student_name
-JOIN classes c ON c.title = v.class_title
+  ('Alice Chen', 'Advanced Mathematics', 'monday', '08:00', '10:00', 'A203'),
+  ('Alice Chen', 'Business English', 'tuesday', '14:00', '16:00', 'B105'),
+  ('Bob Davis', 'Advanced Mathematics', 'wednesday', '08:00', '10:00', 'A203'),
+  ('Charlie Lee', 'Chinese Literature', 'friday', '10:00', '12:00', 'C301'),
+  ('Diana Kim', 'Financial Accounting', 'friday', '14:00', '16:00', 'D202')
+) AS time_slot(student_name, class_title, day, start_time, end_time, room)
+JOIN students s ON s.name = time_slot.student_name
+JOIN classes c ON c.title = time_slot.class_title
 WHERE NOT EXISTS (
-  SELECT 1 FROM enrollments WHERE enrollments.student_id = s.id AND enrollments.class_id = c.id
+  SELECT 1 FROM enrollments 
+  WHERE enrollments.student_id = s.id 
+    AND enrollments.class_id = c.id 
+    AND enrollments.day = time_slot.day 
+    AND enrollments.start_time = time_slot.start_time 
+    AND enrollments.end_time = time_slot.end_time
 );

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { classAPI, teacherAPI, conflictAPI } from '../api';
 import { Schedule, Teacher, TimeSlot } from '../types';
+import MessageDisplay from '../components/MessageDisplay';
+import { useErrorHandler } from '../hooks/useErrorHandler';
 
 const CreateCourse: React.FC = () => {
   const [currentTeacher, setCurrentTeacher] = useState<Teacher | null>(null);
@@ -20,6 +22,7 @@ const CreateCourse: React.FC = () => {
   });
   const [timeSlots, setTimeSlots] = useState<{[key: string]: TimeSlot[]}>({});
   const [conflicts, setConflicts] = useState<{[key: string]: any}>({});
+  const { error, successMessage, handleError, clearError, showSuccess, clearSuccess } = useErrorHandler();
 
   useEffect(() => {
     fetchCurrentTeacher();
@@ -40,6 +43,54 @@ const CreateCourse: React.FC = () => {
       console.error('Error fetching teacher:', error);
     }
   };
+
+  // This useEffect will now automatically check all conflicts whenever the time slots change.
+  useEffect(() => {
+    const validateAllTimeSlots = async () => {
+      if (!currentTeacher) return;
+
+      const newConflicts: {[key: string]: any} = {};
+
+      for (const day in timeSlots) {
+        if (timeSlots.hasOwnProperty(day)) {
+          const slots = timeSlots[day];
+          for (let i = 0; i < slots.length; i++) {
+            const slot = slots[i];
+            if (slot.start && slot.end && slot.room) {
+              try {
+                const [roomCheck, teacherCheck] = await Promise.all([
+                  conflictAPI.checkRoom({
+                    room: slot.room,
+                    day: day,
+                    startTime: slot.start,
+                    endTime: slot.end
+                  }),
+                  conflictAPI.checkTeacher({
+                    teacherId: currentTeacher.id,
+                    day: day,
+                    startTime: slot.start,
+                    endTime: slot.end
+                  })
+                ]);
+
+                const conflictKey = `${day}-${i}`;
+                newConflicts[conflictKey] = {
+                  room: roomCheck.data,
+                  teacher: teacherCheck.data
+                };
+              } catch (err) {
+                console.error(`Error checking conflict for ${day} at index ${i}:`, err);
+              }
+            }
+          }
+        }
+      }
+      setConflicts(newConflicts);
+    };
+
+    validateAllTimeSlots();
+  }, [timeSlots, currentTeacher]);
+
 
   const updateSchedule = () => {
     const newSchedule: Schedule = {
@@ -126,7 +177,7 @@ const CreateCourse: React.FC = () => {
     
     const hasTimeSlots = Object.values(timeSlots).some(slots => slots.length > 0);
     if (!hasTimeSlots) {
-      alert('Please add at least one time slot for the class.');
+      handleError(new Error('Validation Error'), 'Please add at least one time slot for the class.');
       return;
     }
 
@@ -144,7 +195,7 @@ const CreateCourse: React.FC = () => {
     }
 
     if (invalidSlots.length > 0) {
-      alert('Please fix the following issues:\n' + invalidSlots.join('\n'));
+      handleError(new Error('Validation Error'), 'Please fix the following issues:\n' + invalidSlots.join('\n'));
       return;
     }
 
@@ -164,7 +215,7 @@ const CreateCourse: React.FC = () => {
     }
 
     if (conflictErrors.length > 0) {
-      alert('Cannot create class with conflicts:\n' + conflictErrors.join('\n'));
+      handleError(new Error('Conflict Detected'), 'Cannot create class with conflicts. Please review the warnings below.');
       return;
     }
     
@@ -184,10 +235,9 @@ const CreateCourse: React.FC = () => {
         monday: [], tuesday: [], wednesday: [], thursday: [],
         friday: [], saturday: [], sunday: []
       });
-      alert('Class created successfully!');
+      showSuccess('Class created successfully!');
     } catch (error) {
-      alert('Error creating course');
-      console.error(error);
+      handleError(error, 'Error creating course');
     } finally {
       setLoading(false);
     }
@@ -200,6 +250,7 @@ const CreateCourse: React.FC = () => {
 
   return (
     <div className="card">
+      <MessageDisplay error={error} success={successMessage} onClearError={clearError} onClearSuccess={clearSuccess} />
       <h2>Create New Class</h2>
       <p>Teacher: <strong>{currentTeacher.name}</strong> | Subject: <strong>{currentTeacher.subject}</strong></p>
       
@@ -258,7 +309,7 @@ const CreateCourse: React.FC = () => {
                           value={slot.start}
                           onChange={(e) => {
                             updateTimeSlot(day, index, 'start', e.target.value);
-                            setTimeout(() => checkConflicts(day, index), 500);
+                            checkConflicts(day, index);
                           }}
                           style={{ 
                             padding: '4px', 
@@ -276,7 +327,7 @@ const CreateCourse: React.FC = () => {
                           value={slot.end}
                           onChange={(e) => {
                             updateTimeSlot(day, index, 'end', e.target.value);
-                            setTimeout(() => checkConflicts(day, index), 500);
+                            checkConflicts(day, index);
                           }}
                           style={{ 
                             padding: '4px', 
@@ -295,7 +346,7 @@ const CreateCourse: React.FC = () => {
                           value={slot.room}
                           onChange={(e) => {
                             updateTimeSlot(day, index, 'room', e.target.value);
-                            setTimeout(() => checkConflicts(day, index), 500);
+                            checkConflicts(day, index);
                           }}
                           placeholder="e.g., A203, Lab 1"
                           style={{ padding: '4px', width: '100%' }}

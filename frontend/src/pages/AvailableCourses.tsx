@@ -87,6 +87,7 @@ const AvailableCourses: React.FC = () => {
     }
   };
 
+
   const getTeacherName = (teacherId: number) => {
     const teacher = teachers.find(t => t.id === teacherId);
     return teacher?.name || 'Unknown Teacher';
@@ -165,7 +166,7 @@ const AvailableCourses: React.FC = () => {
         <div className="form-group" style={{ margin: 0, flex: 1 }}>
           <input
             type="text"
-            placeholder="Search by course title or subject..."
+            placeholder="Search by course title"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{ width: '100%' }}
@@ -293,53 +294,56 @@ const AvailableCourses: React.FC = () => {
                         
                         if (isEnrolled) {
                           return (
-                            <span 
-                              className="badge badge-success" 
+                            <button 
+                              className="btn btn-success btn-sm" 
                               style={{ 
                                 display: 'flex', 
                                 alignItems: 'center', 
                                 gap: '0.25rem',
-                                minWidth: '80px',
-                                justifyContent: 'center'
+                                minWidth: '100px',
+                                justifyContent: 'center',
+                                cursor: 'not-allowed'
                               }}
                               title="You are already enrolled in this time slot"
+                              disabled
                             >
                               ✓ Enrolled
-                            </span>
+                            </button>
                           );
                         }
                         
                         if (hasConflict && !isEnrolled) {
                           return (
-                            <span 
-                              className="badge badge-warning" 
+                            <button 
+                              className="btn btn-warning btn-sm" 
                               style={{ 
                                 display: 'flex', 
                                 alignItems: 'center', 
                                 gap: '0.25rem',
-                                minWidth: '80px',
                                 justifyContent: 'center',
-                                cursor: 'help'
+                                cursor: 'not-allowed',
+                                minWidth: '80px'
                               }}
                               title={`This time slot conflicts with your existing schedule on ${slot.day}`}
+                              disabled
                             >
                               ⚠️ Conflict
-                            </span>
+                            </button>
                           );
                         }
                         
                         if (loading) {
                           return (
-                            <span 
-                              className="badge" 
+                            <button 
+                              className="btn btn-secondary btn-sm" 
                               style={{ 
-                                backgroundColor: '#6c757d',
                                 minWidth: '80px',
                                 justifyContent: 'center'
                               }}
+                              disabled
                             >
                               Loading...
-                            </span>
+                            </button>
                           );
                         }
                         
@@ -358,7 +362,7 @@ const AvailableCourses: React.FC = () => {
                               display: 'flex', 
                               alignItems: 'center', 
                               gap: '0.25rem',
-                              minWidth: '80px',
+                              minWidth: '100px',
                               justifyContent: 'center'
                             }}
                             title={`Enroll in ${slot.courseTitle} - ${slot.day} ${slot.startTime}-${slot.endTime}`}
@@ -370,7 +374,6 @@ const AvailableCourses: React.FC = () => {
                               </>
                             ) : (
                               <>
-                                <span>+</span>
                                 Enroll
                               </>
                             )}
