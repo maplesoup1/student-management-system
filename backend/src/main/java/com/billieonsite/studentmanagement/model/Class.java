@@ -2,6 +2,11 @@ package com.billieonsite.studentmanagement.model;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "classes")
@@ -9,19 +14,36 @@ public class Class {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    
     @NotBlank(message = "Title is required")
     @Column(nullable = false)
     private String title;
-    @Column(columnDefinition = "TEXT")
+    
+    @Column
+    private String subject;
+    
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "JSONB")
     private String schedule;
+    
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "teacher_id")
     private Teacher teacher;
+
+    @OneToMany(mappedBy = "classEntity", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private Set<Enrollment> enrollments = new HashSet<>();
 
     public Class() {}
 
     public Class(String title, String schedule, Teacher teacher) {
         this.title = title;
+        this.schedule = schedule;
+        this.teacher = teacher;
+    }
+    
+    public Class(String title, String subject, String schedule, Teacher teacher) {
+        this.title = title;
+        this.subject = subject;
         this.schedule = schedule;
         this.teacher = teacher;
     }
@@ -42,6 +64,14 @@ public class Class {
         this.title = title;
     }
 
+    public String getSubject() {
+        return subject;
+    }
+
+    public void setSubject(String subject) {
+        this.subject = subject;
+    }
+
     public String getSchedule() {
         return schedule;
     }
@@ -56,5 +86,13 @@ public class Class {
 
     public void setTeacher(Teacher teacher) {
         this.teacher = teacher;
+    }
+
+    public Set<Enrollment> getEnrollments() {
+        return enrollments;
+    }
+
+    public void setEnrollments(Set<Enrollment> enrollments) {
+        this.enrollments = enrollments;
     }
 }
