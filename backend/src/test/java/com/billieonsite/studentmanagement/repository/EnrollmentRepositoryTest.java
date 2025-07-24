@@ -80,7 +80,7 @@ class EnrollmentRepositoryTest {
         testClass = new Class();
         testClass.setTitle("Advanced Mathematics");
         testClass.setTeacher(testTeacher);
-        testClass.setSchedule(new HashMap<>());
+        testClass.setSchedule("{}"); // Set an empty JSON string for schedule
         entityManager.persist(testClass);
 
         // Create test enrollments
