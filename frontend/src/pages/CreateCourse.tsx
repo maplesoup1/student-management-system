@@ -44,52 +44,57 @@ const CreateCourse: React.FC = () => {
     }
   };
 
-  // This useEffect will now automatically check all conflicts whenever the time slots change.
+  // Debounced conflict checking to prevent race conditions
   useEffect(() => {
-    const validateAllTimeSlots = async () => {
-      if (!currentTeacher) return;
+    const timeoutId = setTimeout(() => {
+      validateAllTimeSlots();
+    }, 500); // 500ms debounce
 
-      const newConflicts: {[key: string]: any} = {};
+    return () => clearTimeout(timeoutId);
+  }, [timeSlots, currentTeacher]);
 
-      for (const day in timeSlots) {
-        if (timeSlots.hasOwnProperty(day)) {
-          const slots = timeSlots[day];
-          for (let i = 0; i < slots.length; i++) {
-            const slot = slots[i];
-            if (slot.start && slot.end && slot.room) {
-              try {
-                const [roomCheck, teacherCheck] = await Promise.all([
-                  conflictAPI.checkRoom({
-                    room: slot.room,
-                    day: day,
-                    startTime: slot.start,
-                    endTime: slot.end
-                  }),
-                  conflictAPI.checkTeacher({
-                    teacherId: currentTeacher.id,
-                    day: day,
-                    startTime: slot.start,
-                    endTime: slot.end
-                  })
-                ]);
+  const validateAllTimeSlots = async () => {
+    if (!currentTeacher) return;
 
-                const conflictKey = `${day}-${i}`;
-                newConflicts[conflictKey] = {
-                  room: roomCheck.data,
-                  teacher: teacherCheck.data
-                };
-              } catch (err) {
-                console.error(`Error checking conflict for ${day} at index ${i}:`, err);
-              }
+    const newConflicts: {[key: string]: any} = {};
+
+    // Process time slots sequentially to avoid overwhelming the server
+    for (const day in timeSlots) {
+      if (timeSlots.hasOwnProperty(day)) {
+        const slots = timeSlots[day];
+        for (let i = 0; i < slots.length; i++) {
+          const slot = slots[i];
+          if (slot.start && slot.end && slot.room) {
+            try {
+              const [roomCheck, teacherCheck] = await Promise.all([
+                conflictAPI.checkRoom({
+                  room: slot.room,
+                  day: day,
+                  startTime: slot.start,
+                  endTime: slot.end
+                }),
+                conflictAPI.checkTeacher({
+                  teacherId: currentTeacher.id,
+                  day: day,
+                  startTime: slot.start,
+                  endTime: slot.end
+                })
+              ]);
+
+              const conflictKey = `${day}-${i}`;
+              newConflicts[conflictKey] = {
+                room: roomCheck.data,
+                teacher: teacherCheck.data
+              };
+            } catch (err) {
+              console.error(`Error checking conflict for ${day} at index ${i}:`, err);
             }
           }
         }
       }
-      setConflicts(newConflicts);
-    };
-
-    validateAllTimeSlots();
-  }, [timeSlots, currentTeacher]);
+    }
+    setConflicts(newConflicts);
+  };
 
 
   const updateSchedule = () => {

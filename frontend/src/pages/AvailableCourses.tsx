@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { classAPI, enrollmentAPI, studentAPI, teacherAPI } from '../api';
-import { Class, Student, Teacher, Enrollment } from '../types';
+import { Class, Student, Teacher, Enrollment, User } from '../types';
 import { useErrorHandler } from '../hooks/useErrorHandler';
 import MessageDisplay from '../components/MessageDisplay';
 
@@ -24,9 +24,21 @@ const AvailableCourses: React.FC = () => {
     setLoading(true);
     clearError();
     try {
-      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const userStr = localStorage.getItem('user');
+      if (!userStr) {
+        throw new Error('User session not found. Please log in again.');
+      }
       
-      if (!currentUser.id) {
+      let currentUser: User; // Explicitly type currentUser as User
+      try {
+        currentUser = JSON.parse(userStr);
+      } catch (parseError) {
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        throw new Error('Invalid session data. Please log in again.');
+      }
+      
+      if (!currentUser || !currentUser.id) {
         throw new Error('User session not found. Please log in again.');
       }
       
@@ -240,23 +252,27 @@ const AvailableCourses: React.FC = () => {
                   room: string;
                 }> = [];
                 
-                // Extract all time slots from the schedule
-                Object.entries(schedule).forEach(([day, slots]) => {
-                  if (Array.isArray(slots) && slots.length > 0) {
-                    slots.forEach((slot: any) => {
-                      timeSlots.push({
-                        courseId: course.id,
-                        courseTitle: course.title,
-                        courseSubject: course.subject,
-                        teacherId: course.teacherId,
-                        day: day,
-                        startTime: slot.start,
-                        endTime: slot.end,
-                        room: slot.room
+                // Extract all time slots from the schedule with null checks
+                if (schedule && typeof schedule === 'object') {
+                  Object.entries(schedule).forEach(([day, slots]) => {
+                    if (Array.isArray(slots) && slots.length > 0) {
+                      slots.forEach((slot: any) => {
+                        if (slot && slot.start && slot.end && slot.room) {
+                          timeSlots.push({
+                            courseId: course.id,
+                            courseTitle: course.title,
+                            courseSubject: course.subject,
+                            teacherId: course.teacherId,
+                            day: day,
+                            startTime: slot.start,
+                            endTime: slot.end,
+                            room: slot.room
+                          });
+                        }
                       });
-                    });
-                  }
-                });
+                    }
+                  });
+                }
                 
                 return timeSlots.map((slot, index) => (
                   <tr key={`${course.id}-${slot.day}-${index}`}>

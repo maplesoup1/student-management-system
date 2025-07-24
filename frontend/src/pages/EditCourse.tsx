@@ -171,8 +171,10 @@ const EditCourse: React.FC = () => {
       return;
     }
 
-    // Validate all time slots
+    // Validate all time slots and check for conflicts
     const invalidSlots = [];
+    const conflictSlots = [];
+    
     for (const [day, slots] of Object.entries(timeSlots)) {
       for (let i = 0; i < slots.length; i++) {
         const slot = slots[i];
@@ -180,6 +182,13 @@ const EditCourse: React.FC = () => {
           invalidSlots.push(`${day} slot ${i + 1}: Missing required fields`);
         } else if (slot.start >= slot.end) {
           invalidSlots.push(`${day} slot ${i + 1}: Start time must be earlier than end time`);
+        } else {
+          // Check for conflicts
+          const conflictKey = `${day}-${i}`;
+          const conflict = conflicts[conflictKey];
+          if (conflict?.teacher?.hasConflict) {
+            conflictSlots.push(`${day} slot ${i + 1}: Teacher conflict - ${conflict.teacher.message}`);
+          }
         }
       }
     }
@@ -187,6 +196,15 @@ const EditCourse: React.FC = () => {
     if (invalidSlots.length > 0) {
       alert('Please fix the following issues:\n' + invalidSlots.join('\n'));
       return;
+    }
+
+    if (conflictSlots.length > 0) {
+      const proceed = window.confirm(
+        'The following conflicts were detected:\n' + 
+        conflictSlots.join('\n') + 
+        '\n\nDo you want to proceed anyway?'
+      );
+      if (!proceed) return;
     }
 
     setLoading(true);
