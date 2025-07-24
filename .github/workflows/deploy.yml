@@ -2,7 +2,7 @@ name: Deploy to AWS Elastic Beanstalk
 
 on:
   push:
-    branches: [ main, master, timmydev ]
+    branches: [ main, master ]
 
 env:
   AWS_REGION: us-east-1
