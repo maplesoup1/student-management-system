@@ -81,12 +81,13 @@ const MyCourses: React.FC = () => {
       }
 
       // Parse the current schedule
-      const currentSchedule = classItem.schedule;
+      const currentSchedule = { ...classItem.schedule };
       
       // Remove the specific time slot from the schedule
-      if (currentSchedule[day]) {
-        currentSchedule[day] = currentSchedule[day].filter(
-          (slot: any) => !(slot.start === startTime && slot.end === endTime)
+      const dayKey = day as keyof typeof currentSchedule;
+      if (currentSchedule[dayKey]) {
+        currentSchedule[dayKey] = currentSchedule[dayKey].filter(
+          (slot) => !(slot.start === startTime && slot.end === endTime)
         );
       }
 
@@ -166,7 +167,7 @@ const MyCourses: React.FC = () => {
                 const timeSlots: Array<{day: string, start: string, end: string, room: string}> = [];
                 Object.entries(classItem.schedule).forEach(([day, slots]) => {
                   if (Array.isArray(slots)) {
-                    slots.forEach((slot: any) => {
+                    slots.forEach((slot) => {
                       timeSlots.push({
                         day: day,
                         start: slot.start,

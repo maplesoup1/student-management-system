@@ -15,26 +15,48 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import CreateAdmin from './pages/CreateAdmin';
 import { User } from './types';
+import { isTokenValid, clearAuthData } from './utils/tokenUtils';
 
 const App: React.FC = () => {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
 
     useEffect(() => {
+        console.log('App.tsx useEffect - checking stored credentials');
         const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-            setCurrentUser(JSON.parse(storedUser));
+        const storedToken = localStorage.getItem('token');
+        
+        console.log('Stored user:', storedUser);
+        console.log('Stored token:', storedToken ? storedToken.substring(0, 20) + '...' : 'null');
+        
+        if (storedUser && storedToken) {
+            if (isTokenValid(storedToken)) {
+                // Token is valid, restore user session
+                console.log('Token is valid, restoring user session');
+                setCurrentUser(JSON.parse(storedUser));
+            } else {
+                // Token expired or invalid, clear storage
+                console.log('Token expired or invalid, clearing storage');
+                clearAuthData();
+            }
+        } else {
+            console.log('No stored credentials found');
         }
     }, []);
 
     const handleLogin = (user: User) => {
-        localStorage.setItem('user', JSON.stringify(user));
+        console.log('App.tsx handleLogin called with user:', user);
         setCurrentUser(user);
+        console.log('currentUser state updated to:', user);
+        // Note: token is already stored in Login component
     };
 
     const handleLogout = () => {
-        localStorage.removeItem('user');
+        clearAuthData();
         setCurrentUser(null);
     };
+
+    console.log('App.tsx render - currentUser:', currentUser);
+    console.log('App.tsx render - currentUser role:', currentUser?.role);
 
     return (
         <Router>

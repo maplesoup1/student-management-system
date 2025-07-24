@@ -80,7 +80,7 @@ const CourseManagement: React.FC = () => {
                 <td>{getTeacherName(course.teacherId)}</td>
                 <td>
                   <div style={{ maxWidth: '200px', wordWrap: 'break-word' }}>
-                    <code>{course.schedule}</code>
+                    <code>{JSON.stringify(course.schedule)}</code>
                   </div>
                 </td>
                 <td>

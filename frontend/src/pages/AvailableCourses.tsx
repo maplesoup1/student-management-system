@@ -228,7 +228,7 @@ const AvailableCourses: React.FC = () => {
             </thead>
             <tbody>
               {availableCourses.map(course => {
-                const schedule = JSON.parse(course.schedule);
+                const schedule = course.schedule;
                 const timeSlots: Array<{
                   courseId: number;
                   courseTitle: string;
@@ -322,7 +322,7 @@ const AvailableCourses: React.FC = () => {
                                 gap: '0.25rem',
                                 justifyContent: 'center',
                                 cursor: 'not-allowed',
-                                minWidth: '80px'
+                                minWidth: '100px'
                               }}
                               title={`This time slot conflicts with your existing schedule on ${slot.day}`}
                               disabled

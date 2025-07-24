@@ -59,7 +59,7 @@ const EditCourse: React.FC = () => {
 
       // Parse existing schedule
       try {
-        const existingSchedule: Schedule = JSON.parse(course.schedule);
+        const existingSchedule: Schedule = course.schedule;
         setSchedule(existingSchedule);
         
         // Convert Schedule to timeSlots format
@@ -195,7 +195,7 @@ const EditCourse: React.FC = () => {
         title: formData.title,
         teacherId: currentTeacher.id,
         subject: formData.subject,
-        schedule: JSON.stringify(schedule)
+        schedule: schedule
       });
       
       alert('Course updated successfully!');

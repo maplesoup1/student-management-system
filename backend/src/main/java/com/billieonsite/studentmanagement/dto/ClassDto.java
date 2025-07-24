@@ -11,7 +11,7 @@ public class ClassDto {
     private String title;
     
     @JsonProperty("schedule")
-    private String schedule;
+    private Object schedule;
     
     private String subject;
     
@@ -22,13 +22,13 @@ public class ClassDto {
     
     public ClassDto() {}
     
-    public ClassDto(String title, String schedule, Long teacherId) {
+    public ClassDto(String title, Object schedule, Long teacherId) {
         this.title = title;
         this.schedule = schedule;
         this.teacherId = teacherId;
     }
     
-    public ClassDto(Long id, String title, String schedule, Long teacherId, String teacherName) {
+    public ClassDto(Long id, String title, Object schedule, Long teacherId, String teacherName) {
         this.id = id;
         this.title = title;
         this.schedule = schedule;
@@ -36,7 +36,7 @@ public class ClassDto {
         this.teacherName = teacherName;
     }
     
-    public ClassDto(Long id, String title, String schedule, String subject, Long teacherId, String teacherName) {
+    public ClassDto(Long id, String title, Object schedule, String subject, Long teacherId, String teacherName) {
         this.id = id;
         this.title = title;
         this.schedule = schedule;
@@ -61,11 +61,11 @@ public class ClassDto {
         this.title = title;
     }
     
-    public String getSchedule() {
+    public Object getSchedule() {
         return schedule;
     }
     
-    public void setSchedule(String schedule) {
+    public void setSchedule(Object schedule) {
         this.schedule = schedule;
     }
     

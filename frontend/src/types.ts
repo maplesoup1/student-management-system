@@ -32,7 +32,7 @@ export interface Teacher {
 export interface Class {
   id: number;
   title: string;
-  schedule: string;
+  schedule: Schedule;
   subject?: string;
   teacherId: number;
   teacherName?: string;
@@ -50,6 +50,20 @@ export interface Enrollment {
   startTime?: string;
   endTime?: string;
   room?: string;
+}
+
+export interface EnrollmentDto {
+  id: number | null;
+  studentId: number;
+  classId: number;
+  studentName: string | null;
+  studentEmail: string | null;
+  classTitle: string | null;
+  teacherName: string | null;
+  day: string;
+  startTime: string;
+  endTime: string;
+  room: string;
 }
 
 export interface TimeSlot {

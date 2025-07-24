@@ -19,6 +19,9 @@ public class Class {
     @Column(nullable = false)
     private String title;
     
+    @Column
+    private String subject;
+    
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "JSONB")
     private String schedule;
@@ -37,6 +40,13 @@ public class Class {
         this.schedule = schedule;
         this.teacher = teacher;
     }
+    
+    public Class(String title, String subject, String schedule, Teacher teacher) {
+        this.title = title;
+        this.subject = subject;
+        this.schedule = schedule;
+        this.teacher = teacher;
+    }
 
     public Long getId() {
         return id;
@@ -52,6 +62,14 @@ public class Class {
 
     public void setTitle(String title) {
         this.title = title;
+    }
+
+    public String getSubject() {
+        return subject;
+    }
+
+    public void setSubject(String subject) {
+        this.subject = subject;
     }
 
     public String getSchedule() {

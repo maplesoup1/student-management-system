@@ -226,7 +226,7 @@ const CreateCourse: React.FC = () => {
         title: formData.title,
         teacherId: currentTeacher.id,
         subject: formData.subject,
-        schedule: JSON.stringify(schedule)
+        schedule: schedule
       });
       
       setFormData({ title: '', subject: currentTeacher.subject });

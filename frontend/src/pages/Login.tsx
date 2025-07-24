@@ -13,10 +13,25 @@ const Login: React.FC<{ onLogin: (user: User) => void }> = ({ onLogin }) => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const data = await login({ username, password });
-            onLogin(data);
+            console.log('=== LOGIN DEBUG ===');
+            console.log('Attempting login with:', { username, password });
+            const loginResponse = await login({ username, password });
+            console.log('Login response received:', loginResponse);
+            console.log('Token:', loginResponse.token);
+            console.log('User:', loginResponse.user);
+            
+            // Store both token and user data
+            localStorage.setItem('token', loginResponse.token);
+            localStorage.setItem('user', JSON.stringify(loginResponse.user));
+            
+            console.log('Stored token:', localStorage.getItem('token'));
+            console.log('Stored user:', localStorage.getItem('user'));
+            
+            onLogin(loginResponse.user);
+            console.log('About to navigate to /');
             navigate('/');
         } catch (err: any) {
+            console.error('Login error:', err);
             setError(err.message || 'An unexpected error occurred');
         }
     };

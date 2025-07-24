@@ -1,9 +1,9 @@
 import React from 'react';
 import { Schedule, TimeSlot } from '../types';
 
-export const formatSchedule = (scheduleStr: string): string => {
+export const formatSchedule = (scheduleInput: string | Schedule): string => {
   try {
-    const schedule: Schedule = JSON.parse(scheduleStr);
+    const schedule: Schedule = typeof scheduleInput === 'string' ? JSON.parse(scheduleInput) : scheduleInput;
     const dayOrder: (keyof Schedule)[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
     
     const days = dayOrder
@@ -18,13 +18,13 @@ export const formatSchedule = (scheduleStr: string): string => {
     
     return days.length > 0 ? days.join(' | ') : 'No schedule';
   } catch {
-    return scheduleStr;
+    return typeof scheduleInput === 'string' ? scheduleInput : 'Invalid schedule';
   }
 };
 
-export const formatScheduleForTable = (scheduleStr: string): JSX.Element => {
+export const formatScheduleForTable = (scheduleInput: string | Schedule): JSX.Element => {
   try {
-    const schedule: Schedule = JSON.parse(scheduleStr);
+    const schedule: Schedule = typeof scheduleInput === 'string' ? JSON.parse(scheduleInput) : scheduleInput;
     const dayOrder: (keyof Schedule)[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
     
     const activeDays = dayOrder
@@ -66,9 +66,9 @@ export const formatScheduleForTable = (scheduleStr: string): JSX.Element => {
   }
 };
 
-export const getScheduleForDisplay = (scheduleStr: string) => {
+export const getScheduleForDisplay = (scheduleInput: string | Schedule) => {
   try {
-    const schedule: Schedule = JSON.parse(scheduleStr);
+    const schedule: Schedule = typeof scheduleInput === 'string' ? JSON.parse(scheduleInput) : scheduleInput;
     const result: { days: string; time: string; room: string } = {
       days: '',
       time: '',

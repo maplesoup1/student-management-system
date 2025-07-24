@@ -33,13 +33,27 @@ public class ClassController {
     public ResponseEntity<List<ClassDto>> getAllClasses() {
         List<Class> classes = classRepository.findAll();
         List<ClassDto> classDtos = classes.stream()
-            .map(clazz -> new ClassDto(
-                clazz.getId(),
-                clazz.getTitle(),
-                clazz.getSchedule(),
-                clazz.getTeacher() != null ? clazz.getTeacher().getId() : null,
-                clazz.getTeacher() != null ? clazz.getTeacher().getName() : null
-            ))
+            .map(clazz -> {
+                Object schedule = clazz.getSchedule();
+                // If schedule is stored as a string, try to parse it as JSON
+                if (schedule instanceof String) {
+                    try {
+                        schedule = objectMapper.readValue((String) schedule, Object.class);
+                    } catch (Exception e) {
+                        System.err.println("Error parsing schedule JSON for class " + clazz.getId() + ": " + e.getMessage());
+                        // Keep as string if parsing fails
+                    }
+                }
+                
+                return new ClassDto(
+                    clazz.getId(),
+                    clazz.getTitle(),
+                    schedule,
+                    clazz.getSubject(),
+                    clazz.getTeacher() != null ? clazz.getTeacher().getId() : null,
+                    clazz.getTeacher() != null ? clazz.getTeacher().getName() : null
+                );
+            })
             .collect(Collectors.toList());
         return ResponseEntity.ok(classDtos);
     }
@@ -49,10 +63,22 @@ public class ClassController {
         Optional<Class> clazz = classRepository.findById(id);
         if (clazz.isPresent()) {
             Class c = clazz.get();
+            Object schedule = c.getSchedule();
+            // If schedule is stored as a string, try to parse it as JSON
+            if (schedule instanceof String) {
+                try {
+                    schedule = objectMapper.readValue((String) schedule, Object.class);
+                } catch (Exception e) {
+                    System.err.println("Error parsing schedule JSON for class " + c.getId() + ": " + e.getMessage());
+                    // Keep as string if parsing fails
+                }
+            }
+            
             ClassDto classDto = new ClassDto(
                 c.getId(),
                 c.getTitle(),
-                c.getSchedule(),
+                schedule,
+                c.getSubject(),
                 c.getTeacher() != null ? c.getTeacher().getId() : null,
                 c.getTeacher() != null ? c.getTeacher().getName() : null
             );
@@ -70,13 +96,27 @@ public class ClassController {
         
         List<Class> classes = classRepository.findByTeacher(teacher.get());
         List<ClassDto> classDtos = classes.stream()
-            .map(clazz -> new ClassDto(
-                clazz.getId(),
-                clazz.getTitle(),
-                clazz.getSchedule(),
-                clazz.getTeacher().getId(),
-                clazz.getTeacher().getName()
-            ))
+            .map(clazz -> {
+                Object schedule = clazz.getSchedule();
+                // If schedule is stored as a string, try to parse it as JSON
+                if (schedule instanceof String) {
+                    try {
+                        schedule = objectMapper.readValue((String) schedule, Object.class);
+                    } catch (Exception e) {
+                        System.err.println("Error parsing schedule JSON for class " + clazz.getId() + ": " + e.getMessage());
+                        // Keep as string if parsing fails
+                    }
+                }
+                
+                return new ClassDto(
+                    clazz.getId(),
+                    clazz.getTitle(),
+                    schedule,
+                    clazz.getSubject(),
+                    clazz.getTeacher().getId(),
+                    clazz.getTeacher().getName()
+                );
+            })
             .collect(Collectors.toList());
         return ResponseEntity.ok(classDtos);
     }
@@ -99,8 +139,22 @@ public class ClassController {
         
         Teacher teacher = teacherOpt.get();
         
+        // Convert schedule to JSON string for storage
+        String scheduleJson;
+        if (classDto.getSchedule() instanceof String) {
+            scheduleJson = (String) classDto.getSchedule();
+        } else {
+            try {
+                scheduleJson = objectMapper.writeValueAsString(classDto.getSchedule());
+            } catch (Exception e) {
+                Map<String, String> error = new HashMap<>();
+                error.put("error", "Invalid schedule format");
+                return ResponseEntity.badRequest().body(error);
+            }
+        }
+        
         // Check for conflicts before creating the class
-        List<String> conflictErrors = checkScheduleConflicts(classDto.getSchedule(), teacher, null);
+        List<String> conflictErrors = checkScheduleConflicts(scheduleJson, teacher, null);
         if (!conflictErrors.isEmpty()) {
             Map<String, Object> error = new HashMap<>();
             error.put("error", "Schedule conflicts detected");
@@ -108,13 +162,22 @@ public class ClassController {
             return ResponseEntity.badRequest().body(error);
         }
         
-        Class clazz = new Class(classDto.getTitle(), classDto.getSchedule(), teacher);
+        Class clazz = new Class(classDto.getTitle(), classDto.getSubject(), scheduleJson, teacher);
         Class savedClass = classRepository.save(clazz);
+        
+        // Parse schedule back to object for response
+        Object responseSchedule = savedClass.getSchedule();
+        try {
+            responseSchedule = objectMapper.readValue(savedClass.getSchedule(), Object.class);
+        } catch (Exception e) {
+            // Keep as string if parsing fails
+        }
         
         ClassDto responseDto = new ClassDto(
             savedClass.getId(),
             savedClass.getTitle(),
-            savedClass.getSchedule(),
+            responseSchedule,
+            savedClass.getSubject(),
             savedClass.getTeacher().getId(),
             savedClass.getTeacher().getName()
         );
@@ -132,7 +195,20 @@ public class ClassController {
 
         Class clazz = classOptional.get();
         clazz.setTitle(classDto.getTitle());
-        clazz.setSchedule(classDto.getSchedule());
+        clazz.setSubject(classDto.getSubject());
+        
+        // Convert schedule to JSON string for storage
+        String scheduleJson;
+        if (classDto.getSchedule() instanceof String) {
+            scheduleJson = (String) classDto.getSchedule();
+        } else {
+            try {
+                scheduleJson = objectMapper.writeValueAsString(classDto.getSchedule());
+            } catch (Exception e) {
+                return ResponseEntity.badRequest().build();
+            }
+        }
+        clazz.setSchedule(scheduleJson);
         
         if (classDto.getTeacherId() != null) {
             Optional<Teacher> teacher = teacherRepository.findById(classDto.getTeacherId());
@@ -145,10 +221,19 @@ public class ClassController {
 
         Class updatedClass = classRepository.save(clazz);
         
+        // Parse schedule back to object for response
+        Object responseSchedule = updatedClass.getSchedule();
+        try {
+            responseSchedule = objectMapper.readValue(updatedClass.getSchedule(), Object.class);
+        } catch (Exception e) {
+            // Keep as string if parsing fails
+        }
+        
         ClassDto responseDto = new ClassDto(
             updatedClass.getId(),
             updatedClass.getTitle(),
-            updatedClass.getSchedule(),
+            responseSchedule,
+            updatedClass.getSubject(),
             updatedClass.getTeacher() != null ? updatedClass.getTeacher().getId() : null,
             updatedClass.getTeacher() != null ? updatedClass.getTeacher().getName() : null
         );

@@ -16,6 +16,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import com.billieonsite.studentmanagement.model.Student;
 import com.billieonsite.studentmanagement.repository.StudentRepository;
 import com.billieonsite.studentmanagement.model.Role;
+import com.billieonsite.studentmanagement.security.JwtUtils;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -29,6 +33,9 @@ public class AuthController {
 
     @Autowired
     private StudentRepository studentRepository;
+
+    @Autowired
+    private JwtUtils jwtUtils;
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest) {
@@ -44,13 +51,33 @@ public class AuthController {
         }
         
         if (user.isPresent() && passwordEncoder.matches(loginRequest.getPassword(), user.get().getPassword())) {
-            UserDto responseDto = new UserDto(
-                user.get().getId(),
-                user.get().getUsername(),
-                null, // email not stored in User model
-                user.get().getRole()
-            );
-            return ResponseEntity.ok(responseDto);
+            try {
+                // Generate JWT token
+                String jwt = jwtUtils.generateJwtToken(
+                    user.get().getUsername(),
+                    user.get().getId(),
+                    user.get().getRole().toString()
+                );
+                
+                System.out.println("JWT generated successfully: " + jwt.substring(0, 20) + "...");
+                
+                // Create response with both token and user info
+                Map<String, Object> response = new HashMap<>();
+                response.put("token", jwt);
+                response.put("user", new UserDto(
+                    user.get().getId(),
+                    user.get().getUsername(),
+                    null, // email not stored in User model
+                    user.get().getRole()
+                ));
+                
+                System.out.println("Login successful for user: " + user.get().getUsername());
+                return ResponseEntity.ok(response);
+            } catch (Exception e) {
+                System.err.println("JWT generation failed: " + e.getMessage());
+                e.printStackTrace();
+                return ResponseEntity.status(500).body("Token generation failed");
+            }
         }
         
         return ResponseEntity.badRequest().body("Invalid username or password");
