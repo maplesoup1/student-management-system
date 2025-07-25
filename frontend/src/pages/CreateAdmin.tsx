@@ -25,7 +25,8 @@ const CreateAdmin: React.FC = () => {
     setError('');
     
     try {
-      const response = await fetch('http://localhost:8080/api/auth/create-admin', {
+      const API_BASE = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
+      const response = await fetch(`${API_BASE}/auth/create-admin`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

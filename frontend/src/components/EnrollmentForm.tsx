@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import { enrollmentAPI } from '../api';
 
 const EnrollmentForm: React.FC = () => {
   const [studentId, setStudentId] = useState('');
@@ -13,7 +13,7 @@ const EnrollmentForm: React.FC = () => {
         classId: parseInt(classId)
       };
 
-      await axios.post('http://localhost:8080/api/enrollments', enrollmentData);
+      await enrollmentAPI.create(enrollmentData);
       alert('Student enrolled successfully!');
       setStudentId('');
       setClassId('');
